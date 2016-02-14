@@ -14,7 +14,7 @@ extern crate bson;
 extern crate mongodb;
 
 // Nickel
-use nickel::{Nickel, JsonBody, HttpRouter};
+use nickel::{Nickel, JsonBody, HttpRouter, MediaType};
 use nickel::status::StatusCode::{self};
 
 // MongoDB
@@ -24,7 +24,6 @@ use mongodb::error::Result as MongoResult;
 
 // bson
 use bson::{Bson, Document};
-use bson::oid::ObjectId;
 
 // rustc_serialize
 use rustc_serialize::json::{Json, ToJson};
@@ -41,9 +40,61 @@ fn main() {
     let mut server = Nickel::new();
     let mut router = Nickel::router();
 
-    router.get("/users", middleware! { |_, response|
+    fn get_data_string(result: MongoResult<Document>) -> Result<Json, String> {
+        match result {
+            Ok(doc) => Ok(Bson::Document(doc).to_json()),
+            Err(e) => Err(format!("{}", e))
+        }
+    }
 
-        format!("Hello from GET /users")
+ // router.get("/users", middleware! {
+    router.get("/users", middleware! { |_, mut response|
+
+        // Connect to the database
+        let client = Client::connect("localhost", 27017)
+        .ok().expect("Error establishing connection.");
+
+        // The users collection
+        let coll = client.db("rust-users").collection("users");
+
+        // Create cursor that finds all documents
+        let cursor = coll.find(None, None).unwrap();
+
+        // Opening for the JSON string to be returned
+        let mut data_result = "{\"data\":[".to_owned();
+
+        for (i, result) in cursor.enumerate() {
+            match get_data_string(result) {
+                Ok(data) => {
+                    let string_data = if i == 0 {
+                        format!("{}",
+                                data)
+                    }
+                    else {
+                     // format!("{},",
+                        format!(",{}",
+                                data)
+                    };
+
+                    data_result.push_str(&string_data);
+                },
+
+                Err(e)
+                    =>
+                    return
+                    response.send(format!("{}",
+                                          e))
+            }
+        }
+
+        // Close the JSON string
+        data_result.push_str("]}");
+
+        // Set the returned type as JSON
+        response.set(MediaType::Json);
+
+        // Send back the result
+        format!("{}", data_result)
 
     });
 
