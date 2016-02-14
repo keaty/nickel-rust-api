@@ -24,6 +24,7 @@ use mongodb::error::Result as MongoResult;
 
 // bson
 use bson::{Bson, Document};
+use bson::oid::ObjectId;
 
 // rustc_serialize
 use rustc_serialize::json::{Json, ToJson};
@@ -126,9 +127,27 @@ fn main() {
 
     });
 
-    router.delete("/users/:id", middleware! { |_, response|
+    router.delete("/users/:id", middleware! { |request, response|
 
-        format!("Hello from DELETE /users/:id")
+        let client = Client::connect("localhost", 27017)
+        .ok().expect("Failed to initialize standalone client.");
+
+        // The users collection
+        let coll = client.db("rust-users").collection("users");
+
+        // Get the objectId from the request params
+        let object_id = request.param("id").unwrap();
+
+        // Match the user id to an bson ObjectId
+        let id = match ObjectId::with_string(object_id) {
+            Ok(oid) => oid,
+            Err(e) => return response.send(format!("{}", e))
+        };
+
+        match coll.delete_one(doc! {"_id" => id}, None) {
+            Ok(_) => (StatusCode::Ok, "Item deleted!"),
+            Err(e) => return response.send(format!("{}", e))
+        }
 
     });
 
