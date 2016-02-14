@@ -1,0 +1,10 @@
+[package]
+name = "nickel_api"
+version = "0.0.1"
+authors = ["Keaty <holla@keaty.com>"]
+
+[dependencies]
+nickel = "*"
+mongodb = "*"
+bson = "*"
+rustc-serialize = "*"
