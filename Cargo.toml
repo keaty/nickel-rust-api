@@ -4,7 +4,10 @@ version = "0.0.1"
 authors = ["Keaty <holla@keaty.com>"]
 
 [dependencies]
-nickel = "*"
+nickel = "0.7.3"
+hyper = "0.6.16"
 mongodb = "*"
 bson = "*"
 rustc-serialize = "*"
+rust-crypto = "*"
+jwt = "*"
